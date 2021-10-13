@@ -1,4 +1,5 @@
 import { db } from "../app.js";
+import admin from "firebase-admin";
 
 export async function createCart(req, res) {
   const { userName } = req.body;
@@ -46,18 +47,14 @@ export async function postProdsCart(req, res) {
     const producto = prod.data();
 
     const docCart = db.collection("carritos").doc(id);
-    const cart = await docCart.get();
-    const carrito = cart.data();
 
-    if (!carrito.productList.includes(producto)) {
-      carrito.productList.push(producto);
-    } else {
-      console.log("producto ya incluido en lista");
-    }
+    const unionCart = await docCart.update({
+      productList: admin.firestore.FieldValue.arrayUnion(producto),
+    });
 
-    console.log(carrito);
+    console.log(unionCart);
 
-    res.status(200).json(carrito);
+    res.status(200).send("Producto añadido");
   } catch (error) {
     res.status(400).send(error.message);
   }
@@ -65,20 +62,23 @@ export async function postProdsCart(req, res) {
 
 export async function deleteProductCart(req, res) {
   const cartId = req.params.id;
-  const prodId = req.params.id_prod;
+  const id_prod = req.params.id_prod;
 
   try {
     const docCart = db.collection("carritos").doc(cartId);
-    const carrito = await docCart.get();
-    const responseCart = carrito.data();
-    console.log(responseCart);
-    await responseCart.delete(prodId);
 
-    if (!responseCart?.productos?.includes(prodId)) {
-      res.status(200).send("producto eliminado del carrito");
-    } else {
-      res.status(400).send("el producto no se encuentra en el carrito");
-    }
+    const docProd = db.collection("productos").doc(id_prod);
+    const prod = await docProd.get();
+    const producto = prod.data();
+    console.log(producto);
+
+    const removeProd = await docCart.update({
+      productList: admin.firestore.FieldValue.arrayRemove(producto),
+    });
+
+    console.log(removeProd);
+
+    res.status(200).send("producto eliminado del carrito");
   } catch (error) {
     res.status(400).send(error.message);
   }
